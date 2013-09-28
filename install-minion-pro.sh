@@ -9,12 +9,16 @@
 # brew install lcdf-typetools 
 
 ## 0.2: If ~/tmp doesn't exist, create it.
+TMP=/tmp
 # mkdir ~/tmp
 
 ## Destination. System wide:  
 # DEST=`kpsexpand '$TEXMFLOCAL'`
 ## Or single-user only:
 DEST=~/Library/texmf
+
+# Get path to script, where we might also store pfbs, etc.
+SRCDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ## Downloader:
 DOWNLOAD="curl -L -O"
@@ -25,77 +29,131 @@ DOWNLOAD="curl -L -O"
 MINIONSRC=~/Library/Fonts
 
 ## Everything gets done in a temporary directory
-cd ~/tmp
+mkdir -p $TMP/minionpro
+mkdir -p $DEST
 
-## 1: MnSymbol
-## http://www.ctan.org/tex-archive/fonts/mnsymbol/
-$DOWNLOAD http://mirror.ctan.org/fonts/mnsymbol.zip 
+function install_mnsymbol () {
+  pushd $TMP
 
-unzip mnsymbol
-cd mnsymbol/tex
+  ## 1: MnSymbol
+  ## http://www.ctan.org/tex-archive/fonts/mnsymbol/
+  $DOWNLOAD http://mirror.ctan.org/fonts/mnsymbol.zip 
 
-## Generates MnSymbol.sty
-latex MnSymbol.ins
+  unzip mnsymbol
+  cd mnsymbol/tex
 
-mkdir -p $DEST/tex/latex/MnSymbol/      \
-    $DEST/fonts/source/public/MnSymbol/ \
-    $DEST/doc/latex/MnSymbol/
+  ## Generates MnSymbol.sty
+  latex MnSymbol.ins
 
-cp MnSymbol.sty $DEST/tex/latex/MnSymbol/MnSymbol.sty
-cd .. # we were in mnsymbol/tex
-cp source/* $DEST/fonts/source/public/MnSymbol/
-cp MnSymbol.pdf README $DEST/doc/latex/MnSymbol/
+  mkdir -p $DEST/tex/latex/MnSymbol/      \
+      $DEST/fonts/source/public/MnSymbol/ \
+      $DEST/doc/latex/MnSymbol/
 
-mkdir -p $DEST/fonts/map/dvips/MnSymbol \
-    $DEST/fonts/enc/dvips/MnSymbol      \
-    $DEST/fonts/type1/public/MnSymbol   \
-    $DEST/fonts/tfm/public/MnSymbol 
-cp enc/MnSymbol.map $DEST/fonts/map/dvips/MnSymbol/
-cp enc/*.enc $DEST/fonts/enc/dvips/MnSymbol/
-cp pfb/*.pfb $DEST/fonts/type1/public/MnSymbol/
-cp tfm/* $DEST/fonts/tfm/public/MnSymbol/
+  cp MnSymbol.sty $DEST/tex/latex/MnSymbol/MnSymbol.sty
+  cd .. # we were in mnsymbol/tex
+  cp source/* $DEST/fonts/source/public/MnSymbol/
+  cp MnSymbol.pdf README $DEST/doc/latex/MnSymbol/
 
-## I believe that this is not strictly needed if DEST is in the home
-## tree on OSX, but might be needed otherwise
-sudo mktexlsr
-updmap --enable MixedMap MnSymbol.map
+  mkdir -p $DEST/fonts/map/dvips/MnSymbol \
+      $DEST/fonts/enc/dvips/MnSymbol      \
+      $DEST/fonts/type1/public/MnSymbol   \
+      $DEST/fonts/tfm/public/MnSymbol 
+  cp enc/MnSymbol.map $DEST/fonts/map/dvips/MnSymbol/
+  cp enc/*.enc $DEST/fonts/enc/dvips/MnSymbol/
+  cp pfb/*.pfb $DEST/fonts/type1/public/MnSymbol/
+  cp tfm/* $DEST/fonts/tfm/public/MnSymbol/
 
-# $DOWNLOAD http://carlo-hamalainen.net/blog/myfiles/minionpro/mnsymbol-test.tex
-# pdflatex mnsymbol-test.tex
+  ## I believe that this is not strictly needed if DEST is in the home
+  ## tree on OSX, but might be needed otherwise
+  sudo mktexlsr
+  updmap --enable MixedMap MnSymbol.map
+  
+  popd
+}
 
-## 2: MinionPro
-mkdir -p ~/tmp/minionpro
-cd ~/tmp/minionpro
+function test_mnsymbol () {
+  pushd $TMP
+  
+  cp $SRCDIR/mnsymbol-test.tex .
+  pdflatex mnsymbol-test.tex
+  open mnsymbol-test.pdf
+  
+  popd
+}
 
-$DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/enc-2.000.zip
-$DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-base.zip
-$DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-full.zip
-$DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/scripts.zip
 
-## This will make the otf directory, among other things.
-unzip scripts.zip
+function setup_minionpro () {
+  ## 2: MinionPro
+  mkdir -p $TMP/minionpro
+  pushd $TMP/minionpro
 
-cp $MINIONSRC/Minion*otf otf/
+  $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/enc-2.000.zip
+  $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-base.zip
+  $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-full.zip
+  $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/scripts.zip
+  
+  popd
+}
 
-## Generate the pfb files
-## This step requires that the LCDF type tools are installed.  Get them here:
-##   http://www.lcdf.org/type/
-./convert.sh
+function convert_minionpro_otf () {
+  pushd $TMP/minionpro
 
-## Copy the pfb files to where they belong:
-mkdir -p $DEST/fonts/type1/adobe/MinionPro
-cp pfb/*.pfb $DEST/fonts/type1/adobe/MinionPro
+  ## This will make the otf directory, among other things.
+  unzip scripts.zip
 
-SRC=`pwd`
-cd $DEST
-unzip $SRC/enc-2.000.zip
-unzip $SRC/metrics-base.zip
-unzip $SRC/metrics-full.zip
-cd $SRC
+  cp $MINIONSRC/Minion*otf otf/
 
-sudo mktexlsr
-updmap --enable MixedMap MinionPro.map
+  ## Generate the pfb files
+  ## This step requires that the LCDF type tools are installed.  Get them here:
+  ##   http://www.lcdf.org/type/
+  ./convert.sh
 
-## Test:
-# $DOWNLOAD http://carlo-hamalainen.net/blog/myfiles/minionpro/minionpro-test.tex
-# pdflatex minionpro-test.tex
+  popd
+}
+
+function copy_minionpro_pfb () {
+  pushd $TMP/minionpro
+  
+  rsync -av $SRCDIR/pfb ./
+  
+  popd
+}
+
+
+function install_minionpro () {
+  pushd $TMP/minionpro
+  
+  ## Copy the pfb files to where they belong:
+  mkdir -p $DEST/fonts/type1/adobe/MinionPro
+  cp pfb/*.pfb $DEST/fonts/type1/adobe/MinionPro
+
+  SRC=`pwd`
+  cd $DEST
+  unzip $SRC/enc-2.000.zip
+  unzip $SRC/metrics-base.zip
+  unzip $SRC/metrics-full.zip
+  cd $SRC
+
+  sudo mktexlsr
+  updmap --enable MixedMap MinionPro.map
+
+  popd
+}
+
+function test_minionpro () {
+  pushd $TMP
+  
+  ## Test:
+  cp $SRCDIR/minionpro-test.tex .
+  pdflatex minionpro-test.tex
+  open minionpro-test.pdf
+  
+  popd
+}
+
+test_mnsymbol
+
+setup_minionpro
+copy_minionpro_pfb
+install_minionpro
+test_minionpro
