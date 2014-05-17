@@ -13,9 +13,9 @@ TMP=/tmp
 # mkdir ~/tmp
 
 ## Destination. System wide:  
-# DEST=`kpsexpand '$TEXMFLOCAL'`
+DEST=`kpsexpand '$TEXMFLOCAL'`
 ## Or single-user only:
-DEST=~/Library/texmf
+#DEST=~/Library/texmf
 
 # Get path to script, where we might also store pfbs, etc.
 SRCDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -66,7 +66,7 @@ function install_mnsymbol () {
   ## I believe that this is not strictly needed if DEST is in the home
   ## tree on OSX, but might be needed otherwise
   sudo mktexlsr
-  updmap --enable MixedMap MnSymbol.map
+  sudo updmap-sys --enable MixedMap MnSymbol.map
   
   popd
 }
@@ -90,6 +90,7 @@ function setup_minionpro () {
   $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/enc-2.000.zip
   $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-base.zip
   $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-full.zip
+  $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/metrics-opticals.zip
   $DOWNLOAD http://mirrors.ctan.org/fonts/minionpro/scripts.zip
   
   popd
@@ -132,6 +133,7 @@ function install_minionpro () {
   unzip $SRC/enc-2.000.zip
   unzip $SRC/metrics-base.zip
   unzip $SRC/metrics-full.zip
+  unzip $SRC/metrics-opticals.zip
   cd $SRC
 
   sudo mktexlsr
